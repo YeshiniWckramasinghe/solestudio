@@ -1,8 +1,10 @@
 import { Suspense, useEffect, useMemo, useState } from 'react'
+import * as THREE from 'three'
 import { Canvas } from '@react-three/fiber'
-import { OrbitControls, useGLTF, Bounds, Environment } from '@react-three/drei'
+import { OrbitControls, useGLTF, Environment } from '@react-three/drei'
 
 const MODEL_PATH = '/models/test/scene.gltf'
+const MODEL_SIZE = 3 // shoe eka me size ekakata scale wenawa (units)
 
 const PARTS = [
   { key: 'upper', label: 'Upper', match: ['body', 'toecap', 'tongue'] },
@@ -48,6 +50,15 @@ function Shoe({ colors }) {
       o.material = o.material.clone()
       o.userData.part = partOf(o.material.name)
     })
+
+    // size eka normalize karala (0,0,0) ekata center karanna
+    const box = new THREE.Box3().setFromObject(copy)
+    const size = box.getSize(new THREE.Vector3())
+    const center = box.getCenter(new THREE.Vector3())
+    const scale = MODEL_SIZE / Math.max(size.x, size.y, size.z)
+    copy.scale.setScalar(scale)
+    copy.position.copy(center).multiplyScalar(-scale)
+
     return copy
   }, [scene])
 
@@ -70,14 +81,25 @@ export default function Studio() {
   return (
     <div className="flex h-[calc(100vh-64px)]">
       <div className="flex-1 bg-neutral-100">
-        <Canvas camera={{ position: [0, 0, 5], fov: 45 }}>
+        <Canvas camera={{ position: [0, 1.5, 6.5], fov: 45 }}>
           <Suspense fallback={null}>
             <Environment preset="studio" />
-            <Bounds fit clip observe margin={1.4}>
-              <Shoe colors={colors} />
-            </Bounds>
+            <Shoe colors={colors} />
           </Suspense>
-          <OrbitControls autoRotate makeDefault />
+          <OrbitControls
+            makeDefault
+            target={[0, 0, 0]}
+            enablePan={false}
+            enableZoom
+            enableDamping
+            dampingFactor={0.08}
+            zoomSpeed={0.8}
+            rotateSpeed={0.8}
+            minDistance={3.5}
+            maxDistance={10}
+            autoRotate
+            autoRotateSpeed={1.5}
+          />
         </Canvas>
       </div>
 
@@ -97,7 +119,7 @@ export default function Studio() {
           onClick={() => setColors(DEFAULT_COLORS)}
           className="mt-4 text-sm underline"
         >
-          Reset
+          Reset colours
         </button>
       </aside>
     </div>
