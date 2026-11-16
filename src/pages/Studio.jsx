@@ -2,34 +2,12 @@ import { Suspense, useEffect, useMemo, useState } from 'react'
 import * as THREE from 'three'
 import { Canvas } from '@react-three/fiber'
 import { OrbitControls, useGLTF, Environment } from '@react-three/drei'
+import ColorPanel from '../components/ColorPanel'
+import { DEFAULT_COLORS, partOf } from '../data/parts'
 
 const MODEL_PATH = '/models/test/scene.gltf'
-const MODEL_SIZE = 3 // shoe eka me size ekakata scale wenawa (units)
-
-const PARTS = [
-  { key: 'upper', label: 'Upper', match: ['body', 'toecap', 'tongue'] },
-  { key: 'sole', label: 'Sole', match: ['sole', 'rubber', 'bottomstripe'] },
-  { key: 'laces', label: 'Laces', match: ['laces', 'laceend'] },
-  { key: 'heel', label: 'Heel', match: ['kickrubber', 'kickribber'] },
-  { key: 'logo', label: 'Logo', match: ['label', 'stripe'] },
-]
-
-const DEFAULT_COLORS = {
-  upper: '#ffffff',
-  sole: '#e5e5e5',
-  laces: '#ffffff',
-  heel: '#111111',
-  logo: '#111111',
-}
-
-// "left_Body1" -> "body"
-function partOf(materialName) {
-  const base = materialName
-    .toLowerCase()
-    .replace(/^(left|right)_/, '')
-    .replace(/\d+$/, '')
-  return PARTS.find((p) => p.match.includes(base))?.key
-}
+const MODEL_SIZE = 3
+const KEEP_TEXTURES = false // true nam original textures thiyenawa (colour dull wenna puluwan)
 
 function Shoe({ colors }) {
   const { scene } = useGLTF(MODEL_PATH)
@@ -49,9 +27,13 @@ function Shoe({ colors }) {
       if (!o.isMesh) return
       o.material = o.material.clone()
       o.userData.part = partOf(o.material.name)
+      if (o.userData.part && !KEEP_TEXTURES) {
+        o.material.map = null // plain colour walata
+        o.material.needsUpdate = true
+      }
     })
 
-    // size eka normalize karala (0,0,0) ekata center karanna
+    // size eka normalize karala center karanna
     const box = new THREE.Box3().setFromObject(copy)
     const size = box.getSize(new THREE.Vector3())
     const center = box.getCenter(new THREE.Vector3())
@@ -90,7 +72,6 @@ export default function Studio() {
             makeDefault
             target={[0, 0, 0]}
             enablePan={false}
-            enableZoom
             enableDamping
             dampingFactor={0.08}
             zoomSpeed={0.8}
@@ -103,24 +84,12 @@ export default function Studio() {
         </Canvas>
       </div>
 
-      <aside className="w-72 p-6 border-l border-neutral-200">
-        <h2 className="text-lg font-light mb-6">Customize</h2>
-        {PARTS.map((p) => (
-          <div key={p.key} className="flex items-center justify-between mb-4">
-            <label className="text-sm">{p.label}</label>
-            <input
-              type="color"
-              value={colors[p.key]}
-              onChange={(e) => setColor(p.key, e.target.value)}
-            />
-          </div>
-        ))}
-        <button
-          onClick={() => setColors(DEFAULT_COLORS)}
-          className="mt-4 text-sm underline"
-        >
-          Reset colours
-        </button>
+      <aside className="w-80 p-6 border-l border-neutral-200 overflow-y-auto">
+        <ColorPanel
+          colors={colors}
+          onChange={setColor}
+          onReset={() => setColors(DEFAULT_COLORS)}
+        />
       </aside>
     </div>
   )
