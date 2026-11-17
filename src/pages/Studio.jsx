@@ -3,13 +3,15 @@ import * as THREE from 'three'
 import { Canvas } from '@react-three/fiber'
 import { OrbitControls, useGLTF, Environment } from '@react-three/drei'
 import ColorPanel from '../components/ColorPanel'
+import MaterialPanel from '../components/MaterialPanel'
 import { DEFAULT_COLORS, partOf } from '../data/parts'
+import { DEFAULT_MATERIAL } from '../data/materials'
+import { applyMaterial } from '../utils/materialTextures'
 
 const MODEL_PATH = '/models/test/scene.gltf'
 const MODEL_SIZE = 3
-const KEEP_TEXTURES = false // true nam original textures thiyenawa (colour dull wenna puluwan)
 
-function Shoe({ colors }) {
+function Shoe({ colors, material }) {
   const { scene } = useGLTF(MODEL_PATH)
 
   const shoe = useMemo(() => {
@@ -22,15 +24,19 @@ function Shoe({ colors }) {
     })
     toRemove.forEach((o) => o.parent.remove(o))
 
-    // material clone karala part eka mark karanna
+    // customizable parts walata aluth material ekak
     copy.traverse((o) => {
       if (!o.isMesh) return
-      o.material = o.material.clone()
-      o.userData.part = partOf(o.material.name)
-      if (o.userData.part && !KEEP_TEXTURES) {
-        o.material.map = null // plain colour walata
-        o.material.needsUpdate = true
-      }
+      const part = partOf(o.material.name)
+      o.userData.part = part
+      if (!part) return
+      const old = o.material
+      o.material = new THREE.MeshPhysicalMaterial({
+        normalMap: old.normalMap,
+        side: old.side,
+        roughness: 0.7,
+        metalness: 0,
+      })
     })
 
     // size eka normalize karala center karanna
@@ -44,6 +50,7 @@ function Shoe({ colors }) {
     return copy
   }, [scene])
 
+  // colours
   useEffect(() => {
     shoe.traverse((o) => {
       if (o.isMesh && o.userData.part) {
@@ -52,11 +59,21 @@ function Shoe({ colors }) {
     })
   }, [shoe, colors])
 
+  // material (upper withari)
+  useEffect(() => {
+    shoe.traverse((o) => {
+      if (o.isMesh && o.userData.part === 'upper') {
+        applyMaterial(o.material, material)
+      }
+    })
+  }, [shoe, material])
+
   return <primitive object={shoe} />
 }
 
 export default function Studio() {
   const [colors, setColors] = useState(DEFAULT_COLORS)
+  const [material, setMaterial] = useState(DEFAULT_MATERIAL)
 
   const setColor = (key, value) => setColors((c) => ({ ...c, [key]: value }))
 
@@ -66,7 +83,7 @@ export default function Studio() {
         <Canvas camera={{ position: [0, 1.5, 6.5], fov: 45 }}>
           <Suspense fallback={null}>
             <Environment preset="studio" />
-            <Shoe colors={colors} />
+            <Shoe colors={colors} material={material} />
           </Suspense>
           <OrbitControls
             makeDefault
@@ -85,6 +102,7 @@ export default function Studio() {
       </div>
 
       <aside className="w-80 p-6 border-l border-neutral-200 overflow-y-auto">
+        <MaterialPanel value={material} onChange={setMaterial} />
         <ColorPanel
           colors={colors}
           onChange={setColor}
