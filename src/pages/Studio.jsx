@@ -2,10 +2,12 @@ import { Suspense, useEffect, useMemo, useState } from 'react'
 import * as THREE from 'three'
 import { Canvas } from '@react-three/fiber'
 import { OrbitControls, useGLTF, Environment } from '@react-three/drei'
-import ColorPanel from '../components/ColorPanel'
+import PresetPanel from '../components/PresetPanel'
 import MaterialPanel from '../components/MaterialPanel'
+import ColorPanel from '../components/ColorPanel'
 import { DEFAULT_COLORS, partOf } from '../data/parts'
 import { DEFAULT_MATERIAL } from '../data/materials'
+import { findActivePreset } from '../data/presets'
 import { applyMaterial } from '../utils/materialTextures'
 
 const MODEL_PATH = '/models/test/scene.gltf'
@@ -77,6 +79,16 @@ export default function Studio() {
 
   const setColor = (key, value) => setColors((c) => ({ ...c, [key]: value }))
 
+  const loadPreset = (preset) => {
+    setColors(preset.colors)
+    setMaterial(preset.material)
+  }
+
+  const activePreset = useMemo(
+    () => findActivePreset(colors, material),
+    [colors, material]
+  )
+
   return (
     <div className="flex h-[calc(100vh-64px)]">
       <div className="flex-1 bg-neutral-100">
@@ -102,6 +114,7 @@ export default function Studio() {
       </div>
 
       <aside className="w-80 p-6 border-l border-neutral-200 overflow-y-auto">
+        <PresetPanel active={activePreset} onSelect={loadPreset} />
         <MaterialPanel value={material} onChange={setMaterial} />
         <ColorPanel
           colors={colors}
