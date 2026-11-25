@@ -1,7 +1,8 @@
-import { Suspense, useEffect, useMemo, useState } from 'react'
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import * as THREE from 'three'
 import { Canvas } from '@react-three/fiber'
 import { OrbitControls, useGLTF, Environment } from '@react-three/drei'
+import { RotateCcw } from 'lucide-react'
 import PresetPanel from '../components/PresetPanel'
 import MaterialPanel from '../components/MaterialPanel'
 import ColorPanel from '../components/ColorPanel'
@@ -76,12 +77,21 @@ function Shoe({ colors, material }) {
 export default function Studio() {
   const [colors, setColors] = useState(DEFAULT_COLORS)
   const [material, setMaterial] = useState(DEFAULT_MATERIAL)
+  const controlsRef = useRef(null)
 
   const setColor = (key, value) => setColors((c) => ({ ...c, [key]: value }))
 
   const loadPreset = (preset) => {
     setColors(preset.colors)
     setMaterial(preset.material)
+  }
+
+  const resetColors = () => setColors(DEFAULT_COLORS)
+  const resetCamera = () => controlsRef.current?.reset()
+  const resetAll = () => {
+    setColors(DEFAULT_COLORS)
+    setMaterial(DEFAULT_MATERIAL)
+    resetCamera()
   }
 
   const activePreset = useMemo(
@@ -91,13 +101,14 @@ export default function Studio() {
 
   return (
     <div className="flex h-[calc(100vh-64px)]">
-      <div className="flex-1 bg-neutral-100">
+      <div className="relative flex-1 bg-neutral-100">
         <Canvas camera={{ position: [0, 1.5, 6.5], fov: 45 }}>
           <Suspense fallback={null}>
             <Environment preset="studio" />
             <Shoe colors={colors} material={material} />
           </Suspense>
           <OrbitControls
+            ref={controlsRef}
             makeDefault
             target={[0, 0, 0]}
             enablePan={false}
@@ -111,6 +122,14 @@ export default function Studio() {
             autoRotateSpeed={1.5}
           />
         </Canvas>
+
+        <button
+          onClick={resetCamera}
+          className="absolute bottom-4 left-4 flex items-center gap-2 px-3 py-2 text-xs tracking-wider bg-white border border-neutral-300 hover:border-black transition"
+        >
+          <RotateCcw size={14} />
+          RESET CAMERA
+        </button>
       </div>
 
       <aside className="w-80 p-6 border-l border-neutral-200 overflow-y-auto">
@@ -119,8 +138,18 @@ export default function Studio() {
         <ColorPanel
           colors={colors}
           onChange={setColor}
-          onReset={() => setColors(DEFAULT_COLORS)}
+          onReset={resetColors}
         />
+
+        <div className="mt-8 pt-6 border-t border-neutral-200">
+          <button
+            onClick={resetAll}
+            className="w-full flex items-center justify-center gap-2 px-3 py-3 text-sm border border-black hover:bg-black hover:text-white transition"
+          >
+            <RotateCcw size={14} />
+            Reset everything
+          </button>
+        </div>
       </aside>
     </div>
   )
